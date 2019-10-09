@@ -6,7 +6,20 @@ import (
 )
 
 func main() {
+	// practice1
 	practice1()
+	// practice1 fin
+
+	// practice2
+	fmt.Printf("main start\n")
+
+	go practice2(1)
+	go practice2(2)
+	go practice2(3)
+	time.Sleep(time.Second) // <- ここが無ければ practice2(n) は実行されない
+
+	fmt.Printf("main end\n")
+	// practice2 fin
 }
 
 /***************************************************************
@@ -52,11 +65,27 @@ func wait6Sec(sig chan string, res chan string, name string) {
 
 	fmt.Printf("%s:end wait 6 sec \n", name)
 
-	res <- fmt.Sprintf("sig %s", name)
+	res <- fmt.Sprintf("sig %s\n", name)
 
-	<-sig
+	v := <-sig
+
+	fmt.Printf("buffer 解放 %s\n", v)
 }
 
 /***************************************************************
  *                     First Practice Fin                      *
  ***************************************************************/
+
+/***************************************************************
+ *                  Secound Practice Start                     *
+ ***************************************************************/
+
+/***************************************************************
+ * main goroutine に time.Sleep(time.Second)の記述が
+ * 無ければpractice2は呼ばれない
+ * 理由は各goroutineより先に main goroutineが終了する為
+ ***************************************************************/
+
+func practice2(i int) {
+	fmt.Printf("hello No.%d", i)
+}
