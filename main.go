@@ -8,18 +8,9 @@ import (
 func main() {
 	// practice1
 	practice1()
-	// practice1 fin
 
 	// practice2
-	fmt.Printf("main start\n")
-
-	go practice2(1)
-	go practice2(2)
-	go practice2(3)
-	time.Sleep(time.Second) // <- ここが無ければ practice2(n) は実行されない
-
-	fmt.Printf("main end\n")
-	// practice2 fin
+	practice2()
 }
 
 /***************************************************************
@@ -84,8 +75,21 @@ func wait6Sec(sig chan string, res chan string, name string) {
  * main goroutine に time.Sleep(time.Second)の記述が
  * 無ければpractice2は呼ばれない
  * 理由は各goroutineより先に main goroutineが終了する為
+ * main goroutineが終了した時に全体のプロセスが終了する
+ * ここで言うmain goroutineはpractice2自体
  ***************************************************************/
 
-func practice2(i int) {
-	fmt.Printf("hello No.%d", i)
+func practice2() {
+	fmt.Printf("main start\n")
+
+	go fmt.Printf("hello No.%d", 1)
+	go fmt.Printf("hello No.%d", 2)
+	go fmt.Printf("hello No.%d", 3)
+	// time.Sleep(time.Second) // <- ここが無ければ practice2(n) は実行されない
+
+	fmt.Printf("main end\n")
 }
+
+/***************************************************************
+ *                  Secound Practice Fin                       *
+ ***************************************************************/
