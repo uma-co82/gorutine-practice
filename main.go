@@ -88,7 +88,7 @@ func practice2() {
 	go fmt.Printf("hello No.%d", 1)
 	go fmt.Printf("hello No.%d", 2)
 	go fmt.Printf("hello No.%d", 3)
-	// time.Sleep(time.Second) // <- ここが無ければ practice2(n) は実行されない
+	// time.Sleep(time.Second) // <- ここが無ければ 各goroutine は実行されない
 
 	fmt.Printf("main end\n")
 }
@@ -98,7 +98,7 @@ func practice2() {
  ***************************************************************/
 
 /***************************************************************
- *                  Third Practice Start                     *
+ *                  Third Practice Start                       *
  ***************************************************************/
 
 /***************************************************************
@@ -106,6 +106,11 @@ func practice2() {
  * 結果は `hello5` が5回表示される
  * i が 5になった段階でtime.Sleep(time.Second)が呼ばれmain goroutine
  * が止まり,その間に各goroutineが実行される為
+ *
+ * 以下で回避可能
+ * go func(i int) {
+ * 	fmt.Println("hello", i)
+ * }(i)
  ***************************************************************/
 
 func practice3() {
@@ -120,3 +125,7 @@ func practice3() {
 
 	fmt.Printf("main end\n")
 }
+
+/***************************************************************
+ *                  Third Practice  Fin 		                   *
+ ***************************************************************/
