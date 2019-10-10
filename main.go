@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sync"
 	"time"
 )
 
@@ -129,3 +130,33 @@ func practice3() {
 /***************************************************************
  *                  Third Practice  Fin 		                   *
  ***************************************************************/
+
+/***************************************************************
+ *                  Fourth Practice Start		                   *
+ ***************************************************************/
+
+/***************************************************************
+ * Shared-memory :メモリを共有して通信をやり取りする
+ * sync.Mutex.Lock()によってメモリへのアクセスを取得
+ * sync.Mutex.Unlock()で解放
+ * *ちなみにこのコードでも実行される順序は非決定的
+ ***************************************************************/
+
+func practice4() {
+	var memoryAccess sync.Mutex
+	var data int
+
+	go func() {
+		memoryAccess.Lock()
+		data++
+		memoryAccess.Unlock()
+	}()
+
+	memoryAccess.Lock()
+	if data == 0 {
+		fmt.Printf("the value is 0\n")
+	} else {
+		fmt.Printf("the value is %v\n", data)
+	}
+	memoryAccess.Unlock()
+}
