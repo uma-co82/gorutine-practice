@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
+	"testing"
 	"time"
 )
 
@@ -21,7 +22,15 @@ func main() {
 
 	// practice6()
 
-	practice7()
+	// practice7()
+
+	// practice8()
+
+	// practice9()
+
+	// practice10()
+
+	// practice11()
 }
 
 /***************************************************************
@@ -257,7 +266,6 @@ func practice7() {
 			sharedLock.Lock()
 			time.Sleep(1 * time.Nanosecond)
 			sharedLock.Unlock()
-
 			sharedLock.Lock()
 			time.Sleep(1 * time.Nanosecond)
 			sharedLock.Unlock()
@@ -275,4 +283,113 @@ func practice7() {
 	go greedyWorker()
 	go politeWorker()
 	wg.Wait()
+}
+
+/***************************************************************
+ * 合流ポイント
+ * time.Sleepを訂正した正しい例
+ ***************************************************************/
+
+func practice8() {
+	var wg sync.WaitGroup
+	sayHello := func() {
+		defer wg.Done()
+		fmt.Println("hello")
+	}
+
+	wg.Add(1)
+	go sayHello()
+	wg.Wait()
+}
+
+func practice9() {
+	var wg sync.WaitGroup
+	salutation := "hello"
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		salutation = "welcome"
+	}()
+	wg.Wait()
+
+	fmt.Println(salutation)
+}
+
+func practice10() {
+	var wg sync.WaitGroup
+	for _, salutation := range []string{"hello", "greetings", "good day"} {
+		wg.Add(1)
+		// goroutineが開始する前にforによるループが終了する
+		// コピーする事で回避可能
+		go func() {
+			defer wg.Done()
+			fmt.Println(salutation)
+		}()
+	}
+	wg.Wait()
+}
+
+/***************************************************************
+ * コンテキストスイッチベンチマーク
+ ***************************************************************/
+
+func practice11(b *testing.B) {
+	var wg sync.WaitGroup
+	begin := make(chan struct{})
+	c := make(chan struct{})
+
+	var token struct{}
+	sender := func() {
+		defer wg.Done()
+		<-begin
+		for i := 0; i < b.N; i++ {
+			c <- token
+		}
+	}
+	receiver := func() {
+		defer wg.Done()
+		<-begin
+		for i := 0; i < b.N; i++ {
+			<-c
+		}
+	}
+
+	wg.Add(2)
+	go sender()
+	go receiver()
+	b.StartTimer()
+	close(begin)
+	wg.Wait()
+}
+
+/***************************************************************
+ * syncパッケージ
+ ***************************************************************/
+
+/***************************************************************
+ * WaitGroup
+ * 結果を気にしない、もしくは他に結果を収集する手段がある場合
+ * ひとまとまりの並行処理の完了を待つのに向いている
+ ***************************************************************/
+
+func practice12() {
+	var wg sync.WaitGroup
+
+	wg.Add(1) // Addの引数に1を渡して、１つのゴルーチンが起動した事を表している
+	go func() {
+		defer wg.Done()
+		fmt.Println("1st goroutine sleeping...")
+		time.Sleep(1)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done() // WaitGroupに終了する事を伝える
+		fmt.Println("2nd goroutine sleeping...")
+		time.Sleep(2)
+	}()
+
+	wg.Wait() // Waitは全てのゴルーチンが終了したと伝えるまでメインゴルーチンをブロックする
+	fmt.Println("All goroutine complete.")
 }
