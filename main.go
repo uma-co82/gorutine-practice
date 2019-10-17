@@ -3,9 +3,12 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"math"
+	"os"
 	"sync"
 	"sync/atomic"
 	"testing"
+	"text/tabwriter"
 	"time"
 )
 
@@ -31,6 +34,14 @@ func main() {
 	// practice10()
 
 	// practice11()
+
+	// practice12()
+
+	// practice13()
+
+	// practice14()
+
+	practice15()
 }
 
 /***************************************************************
@@ -371,6 +382,9 @@ func practice11(b *testing.B) {
  * WaitGroup
  * 結果を気にしない、もしくは他に結果を収集する手段がある場合
  * ひとまとまりの並行処理の完了を待つのに向いている
+ * Addの呼び出しは監視対象のgoroutineの外で行う事
+ *
+ * 出来る限り監視対象のgoroutineの直前でAddを呼ぶ事
  ***************************************************************/
 
 func practice12() {
@@ -392,4 +406,123 @@ func practice12() {
 
 	wg.Wait() // Waitは全てのゴルーチンが終了したと伝えるまでメインゴルーチンをブロックする
 	fmt.Println("All goroutine complete.")
+}
+
+func practice13() {
+	hello := func(wg *sync.WaitGroup, id int) {
+		defer wg.Done()
+		fmt.Printf("Hello from %v\n", id)
+	}
+
+	const numGreeters = 5
+	var wg sync.WaitGroup
+	wg.Add(numGreeters)
+	for i := 0; i < numGreeters; i++ {
+		go hello(&wg, i+1)
+	}
+	wg.Wait()
+}
+
+/***************************************************************
+ * Mutex
+ * メモリへのアクセスを同期する
+ * クリティカルセクションを保護する
+
+ * Unlockの呼び出しはdeferで行う事がイディオム
+ ***************************************************************/
+
+func practice14() {
+	var count int
+	var lock sync.Mutex
+
+	increment := func() {
+		lock.Lock()
+		defer lock.Unlock()
+		count++
+		fmt.Printf("Incrementing: %d\n", count)
+	}
+
+	decrement := func() {
+		lock.Lock()         //Mutexインスタンスで保護されたクリティカルセクション
+		defer lock.Unlock() // 保護したクリティカルセクションの処理が終了した
+		count--
+		fmt.Printf("Decrementing: %d\n", count)
+	}
+
+	var arithmethis sync.WaitGroup
+	for i := 0; i <= 5; i++ {
+		arithmethis.Add(1)
+		go func() {
+			defer arithmethis.Done()
+			increment()
+		}()
+	}
+
+	for i := 0; i <= 5; i++ {
+		arithmethis.Add(1)
+		go func() {
+			defer arithmethis.Done()
+			decrement()
+		}()
+	}
+
+	arithmethis.Wait()
+
+	fmt.Println("Arithmetic complete.")
+}
+
+/***************************************************************
+ * RWMutex
+ * メモリへのアクセスを同期する
+ * クリティカルセクションを保護する
+ * Mutexより多くメモリの管理を提供してくれる。
+ * 書き込みのロックを要求した場合読み込みのロックが取れる
+ *
+ * 論理的に意味があると思うときはMutexでは無く、基本RWMutex
+ ***************************************************************/
+
+func practice15() {
+	producer := func(wg *sync.WaitGroup, l sync.Locker) {
+		defer wg.Done()
+		for i := 5; i > 0; i-- {
+			l.Lock()
+			l.Unlock()
+			time.Sleep(1)
+		}
+	}
+
+	observer := func(wg *sync.WaitGroup, l sync.Locker) {
+		defer wg.Done()
+		l.Lock()
+		defer l.Unlock()
+	}
+
+	test := func(count int, mutex, rwMutex sync.Locker) time.Duration {
+		var wg sync.WaitGroup
+		wg.Add(count + 1)
+		beginTestTime := time.Now()
+		go producer(&wg, mutex)
+		for i := count; i > 0; i-- {
+			go observer(&wg, rwMutex)
+		}
+
+		wg.Wait()
+		return time.Since(beginTestTime)
+	}
+
+	tw := tabwriter.NewWriter(os.Stdout, 0, 1, 2, ' ', 0)
+	defer tw.Flush()
+
+	var m sync.RWMutex
+	fmt.Fprintf(tw, "Readers\tRWMutex\tMutex\n")
+	for i := 0; i < 20; i++ {
+		count := int(math.Pow(2, float64(i)))
+		fmt.Fprintf(
+			tw,
+			"%d\t%v\t%v\n",
+			count,
+			test(count, &m, m.RLocker()),
+			test(count, &m, &m),
+		)
+	}
 }
