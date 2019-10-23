@@ -41,7 +41,15 @@ func main() {
 
 	// practice14()
 
-	practice15()
+	// practice15()
+
+	// practice16()
+
+	// practice17()
+
+	// practice18()
+
+	practice19()
 }
 
 /***************************************************************
@@ -531,6 +539,7 @@ func practice15() {
  * Cond
  * 2つ以上のごルーチン間で、「それ」が発生したというシグナル
  * ゴルーチン上で処理を続ける前にシグナルを受け取りたい時に使う
+ * Waitの呼び出しはブロックするだけでなく現在のゴルーチンを一時停止する
  ***************************************************************/
 
 func practice16() {
@@ -548,7 +557,95 @@ func practice16() {
 
 /***************************************************************
  * Cond - Broadcast
+ * シグナルを待っているすべてのゴルーチンにシグナルを伝える。
+ * Signalはシグナルを一番長く待っているゴルーチンを見つけ、そのゴルーチンに伝える
  ***************************************************************/
-func practice17() {
 
+func practice17() {
+	type Button struct {
+		Clicked *sync.Cond
+	}
+	button := Button{Clicked: sync.NewCond(&sync.Mutex{})}
+
+	subscribe := func(c *sync.Cond, fn func()) {
+		var goroutieRunning sync.WaitGroup
+		goroutieRunning.Add(1)
+		go func() {
+			goroutieRunning.Done()
+			c.L.Lock()
+			defer c.L.Unlock()
+			c.Wait()
+			fn()
+		}()
+		goroutieRunning.Wait()
+	}
+
+	var clickRegistered sync.WaitGroup
+	clickRegistered.Add(3)
+	subscribe(button.Clicked, func() {
+		fmt.Println("Maximizing window.")
+		clickRegistered.Done()
+	})
+	subscribe(button.Clicked, func() {
+		fmt.Println("Displaying annoying dialog box!")
+		clickRegistered.Done()
+	})
+	subscribe(button.Clicked, func() {
+		fmt.Println("Mouse clicked.")
+		clickRegistered.Done()
+	})
+
+	button.Clicked.Broadcast()
+	clickRegistered.Wait()
 }
+
+/***************************************************************
+ * Once
+ * Do()に渡された関数がたとえ異なるゴルーチンで呼ばれたとしても、
+ * 一度しか実行されないようにする型
+ ***************************************************************/
+
+func practice18() {
+	var count int
+
+	increment := func() {
+		count++
+	}
+
+	var once sync.Once
+
+	var increments sync.WaitGroup
+	increments.Add(100)
+	for i := 0; i < 100; i++ {
+		go func() {
+			defer increments.Done()
+			once.Do(increment)
+		}()
+	}
+
+	increments.Wait()
+	fmt.Printf("Count is %d\n", count)
+}
+
+/***************************************************************
+ * OnceはDo()が呼び出された回数だけを数えていて、Doに渡された一意な関数が
+ * 呼び出された回数を数えているわけではない
+ *
+ * syncパッケージ内の型を使うときは狭い範囲が最適
+ ***************************************************************/
+
+func practice19() {
+	var count int
+	increment := func() { count++ }
+	decrement := func() { count-- }
+
+	var once sync.Once
+	once.Do(increment)
+	once.Do(decrement)
+
+	fmt.Printf("Count: %d\n", count)
+}
+
+/***************************************************************
+ * Pool
+ ***************************************************************/
