@@ -61,7 +61,21 @@ func main() {
 
 	// practice24()
 
-	practice25()
+	// practice25()
+
+	// practice26()
+
+	// practice27()
+
+	// practice28()
+
+	// practice29()
+
+	// practice30()
+
+	// practice31()
+
+	// practice32()
 }
 
 /***************************************************************
