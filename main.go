@@ -49,7 +49,19 @@ func main() {
 
 	// practice18()
 
-	practice19()
+	// practice19()
+
+	// practice20()
+
+	// practice21()
+
+	// practice22()
+
+	// practice23()
+
+	// practice24()
+
+	practice25()
 }
 
 /***************************************************************
@@ -648,4 +660,283 @@ func practice19() {
 
 /***************************************************************
  * Pool
+ * オブジェクトプールパターンは使うものを決まった数だけ、作る方法(EX.)DB接続)
+ * プール内に使用可能なインスタンスがあるか確認
+ * あれば呼び出し元に返す
+ * なければNewメンバー変数を呼び出し、新しいインスタンスを作成
+ * 作業が終われば、呼び出し元はPutを呼んで、使っていたインスタンスをプールに戻す
+ * そうすると他のプロセスが使える
  ***************************************************************/
+
+func practice20() {
+	myPool := &sync.Pool{
+		New: func() interface{} {
+			fmt.Println("Creating new instance.")
+			return struct{}{}
+		},
+	}
+
+	myPool.Get()
+	instance := myPool.Get()
+	myPool.Put(instance)
+	myPool.Get()
+}
+
+func practice21() {
+	var numClassCreated int
+	calcPool := &sync.Pool{
+		New: func() interface{} {
+			numClassCreated++
+			mem := make([]byte, 1024)
+			return &mem
+		},
+	}
+
+	calcPool.Put(calcPool.New())
+	calcPool.Put(calcPool.New())
+	calcPool.Put(calcPool.New())
+	calcPool.Put(calcPool.New())
+
+	const numWorkers = 1024 * 1024
+	var wg sync.WaitGroup
+	wg.Add(numWorkers)
+	for i := numWorkers; i > 0; i-- {
+		go func() {
+			defer wg.Done()
+
+			mem := calcPool.Get().(*[]byte)
+			defer calcPool.Put(mem)
+		}()
+	}
+
+	wg.Wait()
+	fmt.Printf("%d calculators were created.", numClassCreated)
+}
+
+/***************************************************************
+ * チャネル
+ * ゴルーチン間の通信に使うのが最適
+ * 変数名の末尾を"Stream","Ch","c"にするのが良い
+ * チャネルを扱う時は常に初期化すること！
+ ***************************************************************/
+
+func practice22() {
+	// 送受信
+	var dataStream chan interface{}
+	dataStream = make(chan interface{})
+
+	// 受信のみ
+	var reserveStream <-chan interface{}
+	reserveStream = make(<-chan interface{})
+
+	// 送信のみ
+	var sendStream chan<- interface{}
+	sendStream = make(chan<- interface{})
+
+	// 正しい記述
+	reserveStream = dataStream
+	sendStream = dataStream
+
+	fmt.Printf("%v", reserveStream)
+	fmt.Printf("%v", sendStream)
+}
+
+func practice23() {
+	stringStream := make(chan string)
+	go func() {
+		stringStream <- "Hello channels!"
+	}()
+	// stringStreamに何か入ってくるまでブロックして待っている
+	fmt.Println(<-stringStream)
+
+	valueStream := make(chan int)
+	// チャネルを閉じる
+	close(valueStream)
+	integer, ok := <-valueStream
+	fmt.Printf("(%v): %v", ok, integer)
+
+	intStream := make(chan int)
+	go func() {
+		defer close(intStream)
+		for i := 1; i <= 5; i++ {
+			intStream <- i
+		}
+	}()
+
+	// rangeはチャンネルが閉じた時に自動的にループを終了する
+	for integer := range intStream {
+		fmt.Printf("%v\n", integer)
+	}
+}
+
+// 複数のゴルーチン一度に解放する
+func practice24() {
+	begin := make(chan interface{})
+	var wg sync.WaitGroup
+	for i := 0; i < 4; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			<-begin
+			fmt.Printf("%v has begun\n", i)
+		}(i)
+	}
+
+	fmt.Println("Unblocking goroutines...")
+	close(begin)
+	wg.Wait()
+}
+
+// バッファ付きチャネル
+func practice25() {
+	var stdoutBuff bytes.Buffer
+	defer stdoutBuff.WriteTo(os.Stdout)
+
+	intStream := make(chan int, 4)
+	go func() {
+		defer close(intStream)
+		defer fmt.Fprintln(&stdoutBuff, "Producer Done.")
+		for i := 0; i < 5; i++ {
+			fmt.Fprintf(&stdoutBuff, "Sending: %d\n", i)
+			intStream <- i
+		}
+	}()
+
+	// intStreamに4つ入るまでブロックされる
+	for integer := range intStream {
+		fmt.Fprintf(&stdoutBuff, "Received %v. \n", integer)
+	}
+}
+
+// チャネルの権限をゴルーチン毎に明確にする
+// 1. チャネルを初期化
+// 2. 書き込みを行うか、他のゴルーチンに所有権を渡します。
+// 3. チャネルを閉じる
+// 4. 上の3つの手順をカプセル化して読み込みチャネルを経由して公開
+func practice26() {
+	// 受信専用のチャネルを返す
+	chanOwner := func() <-chan int {
+		resultStream := make(chan int, 5)
+		go func() {
+			defer close(resultStream)
+			for i := 0; i <= 5; i++ {
+				resultStream <- i
+			}
+		}()
+		return resultStream
+	}
+
+	resultStream := chanOwner()
+	for result := range resultStream {
+		fmt.Printf("Received: %d\n", result)
+	}
+	fmt.Println("Done receiving!")
+}
+
+/***************************************************************
+ * select文
+ * 上から順番に評価されない
+ * 読み込みや書き込みのチャネルは全て同時に取り扱われ
+ * どれが用意できたかを確認する
+ * どのチャネルも準備できていない場合はselect全体がブロックする
+ ***************************************************************/
+
+func practice27() {
+	var c1, c2 <-chan interface{}
+	var c3 chan<- interface{}
+
+	select {
+	case <-c1:
+		// 何かする
+	case <-c2:
+		// 何かする
+	case c3 <- struct{}{}:
+		// 何かする
+	}
+}
+
+// selectブロックに入ってからおよそ5秒後にブロックをやめる
+// case <-cでclose()を感知
+func practice28() {
+	start := time.Now()
+	c := make(chan interface{})
+	go func() {
+		time.Sleep(5 * time.Second)
+		close(c)
+	}()
+
+	fmt.Println("Blocking on read...")
+	select {
+	case <-c:
+		fmt.Printf("Unblocked %v later.\n", time.Since(start))
+	}
+}
+
+// 複数のチャネルが同時に読み込める様になった時
+// case文全体ではそれぞれの条件が等しく選択される可能性がある
+func practice29() {
+	c1 := make(chan interface{})
+	close(c1)
+	c2 := make(chan interface{})
+	close(c2)
+
+	var c1Count, c2Count int
+	for i := 1000; i >= 0; i-- {
+		select {
+		case <-c1:
+			c1Count++
+		case <-c2:
+			c2Count++
+		}
+	}
+
+	fmt.Printf("c1Count: %d\nc2Count: %d\n", c1Count, c2Count)
+}
+
+// 全てのチャネルがブロックされた時
+func practice30() {
+	var c <-chan int
+	select {
+	case <-c: // このcase分はnilチャンネルから読み込んでいるので決してブロックが解放されない
+	case <-time.After(1 * time.Second): // タイムアウトを実現する
+		fmt.Println("Timed out.")
+	}
+}
+
+// チャネルが１つも読み込めず、その間に何かする必要ある時
+func practice31() {
+	start := time.Now()
+	var c1, c2 <-chan int
+
+	select {
+	case <-c1:
+	case <-c2:
+	default:
+		fmt.Printf("In default after %v\n\n", time.Since(start))
+	}
+}
+
+// default節はfo-selectループの中で使われる
+// ゴルーチンの結果報告を待つ間に他のゴルーチンで仕事を進められます
+func practice32() {
+	done := make(chan interface{})
+	go func() {
+		time.Sleep(5 * time.Second) //5秒間スリープした後closeする
+		close(done)
+	}()
+
+	workCounter := 0
+loop:
+	for {
+		select {
+		case <-done: // 5秒間スリープした後close()を感知
+			break loop
+		default:
+		}
+
+		workCounter++
+		time.Sleep(1 * time.Second)
+	}
+
+	fmt.Printf("Achived %v cycles of work before signalled to stop.\n", workCounter)
+}
