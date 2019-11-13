@@ -19,9 +19,10 @@ golang gorutine practice repo
 
 ### 3. primitive introduction
 
-- Restraint (拘束)
+- restraint (拘束)
   - アドホック拘束
   - レキシカル拘束
 - for-select loop
 - avoid goroutine leak
 - or channle
+- error handling
