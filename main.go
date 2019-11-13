@@ -1167,3 +1167,38 @@ func practice39() {
 	}
 	close(done)
 }
+
+/***************************************************************
+ * orチャネル
+ * 1つ以上のdoneチャネルを1つのdoneチャネルにまとめ、まとめてるチャネルのうちの
+ * どれか１つのチャネルが閉じられたら、まとめたチャネルも閉じる
+ ***************************************************************/
+
+func practice40() {
+	var or func(channels ...<-chan interface{}) <-chan interface{}
+	or = func(channels ...<-chan interface{}) <-chan interface{} {
+		switch len(channels) {
+		case 0:
+			return nil
+		case 1:
+			return channels[0]
+		}
+		orDone := make(chan interface{})
+		go func() {
+			defer close(orDone)
+			switch len(channels) {
+			case 2:
+				select {
+				case <-channels[0]:
+				case <-channels[1]:
+				}
+			default:
+			case <-channels[0]:
+			case <-channels[1]:
+			case <-channels[2]:
+			case <-or(append(channels[3:], orDone)...):
+			}
+		}()
+		return orDone
+	}
+}
