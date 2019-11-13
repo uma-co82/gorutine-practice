@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"math"
+	"math/rand"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -76,6 +77,18 @@ func main() {
 	// practice31()
 
 	// practice32()
+
+	// practice33()
+
+	// practice34()
+
+	// practice35()
+
+	// practice36()
+
+	// practice37()
+
+	practice38()
 }
 
 /***************************************************************
@@ -953,4 +966,204 @@ loop:
 	}
 
 	fmt.Printf("Achived %v cycles of work before signalled to stop.\n", workCounter)
+}
+
+/***************************************************************
+ * プリミティブ紹介
+ ***************************************************************/
+
+/***************************************************************
+ * 拘束
+ * パフォーマンス向上、可読性向上、同期の問題を考えなくて良い
+ * - イミュータブルなデータ
+ * - 拘束によって保護されたデータ
+ ***************************************************************/
+
+/***************************************************************
+ * アドホック拘束
+ * 拘束を規約によって達成する  <- 実際ムリ！！
+ ***************************************************************/
+
+func practice33() {
+	data := make([]int, 4)
+
+	// loopDataからしかdataにアクセスしない様な規約があったとする
+	// しかし、人が触る物なのでいつミスが起こるか分からない
+	loopData := func(handleData chan<- int) {
+		defer close(handleData)
+		for i := range data {
+			handleData <- data[i]
+		}
+	}
+
+	handleData := make(chan int)
+	go loopData(handleData)
+
+	for num := range handleData {
+		fmt.Println(num)
+	}
+}
+
+/***************************************************************
+ * レキシカル拘束
+ * コンパイラによって拘束を強制する
+ * - チャネルへの読み書きのうち必要な権限だけ公開する
+ ***************************************************************/
+
+func practice34() {
+	// resultsチャネルへの書き込みができるスコープを制限
+	// 書き込み権限を拘束
+	chanOwner := func() <-chan int {
+		results := make(chan int, 5)
+		go func() {
+			defer close(results)
+			for i := 0; i <= 5; i++ {
+				results <- i
+			}
+		}()
+		return results
+	}
+
+	// 読み込み用に拘束
+	consumer := func(results <-chan int) {
+		for result := range results {
+			fmt.Printf("Received: %d\n", result)
+		}
+		fmt.Println("Done receiving!")
+	}
+
+	// 読み込み権限
+	results := chanOwner()
+	consumer(results)
+}
+
+func practice35() {
+	printData := func(wg *sync.WaitGroup, data []byte) {
+		defer wg.Done()
+		var buff bytes.Buffer
+		for _, b := range data {
+			fmt.Fprintf(&buff, "%c", b)
+		}
+		fmt.Println(buff.String())
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	data := []byte("golang")
+	// それぞれのごルーチンがdataの一部にしかアクセスできない様に拘束している
+	go printData(&wg, data[:3])
+	go printData(&wg, data[3:])
+
+	wg.Wait()
+}
+
+/***************************************************************
+ * for-selectループ
+ * 外部から停止の命令が来るまで無限に繰り返すゴルーチンを作る事が多い
+ ***************************************************************/
+
+// doneチャネルが閉じられていなければ、select文を抜けてforループの本体の残りの処理を続ける。
+// (doneチャネルが閉じられるまで永遠に続ける処理)
+// defaultの中に書いてもおk
+func practice36() {
+	done := make(chan int)
+	for {
+		select {
+		case <-done:
+			return
+		default:
+		}
+		// (doneチャネルが閉じられるまで永遠に続ける処理)
+	}
+}
+
+/***************************************************************
+ * ゴルーチンリークを避ける
+ * ゴルーチンはランタイムによってガベージコレクションされないので片付けたい
+ *
+ * もしあるゴルーチンがゴルーチンの生成の責任を持っているのであれば
+ * そのゴルーチンを停止できるようにする責任もある
+ ***************************************************************/
+
+// doWorkを含むごルーチンはこのプロセスが生きている限りずっとメモリ内に残る
+func practice37() {
+	doWork := func(strings <-chan string) <-chan interface{} {
+		completed := make(chan interface{})
+		go func() {
+			defer fmt.Println("doWork exited")
+			defer close(completed)
+			for s := range strings {
+				fmt.Println(s)
+			}
+		}()
+		return completed
+	}
+
+	doWork(nil)
+
+	fmt.Println("Done.")
+}
+
+// ゴルーチンの親子間で親から子にキャンセルのシグナルを送れるようにする
+// このシグナルは慣習として、doneという名前の読み込み専用チャネルにする
+// 読み込み版
+func practice38() {
+	doWork := func(
+		done <-chan interface{},
+		strings <-chan string,
+	) <-chan interface{} {
+		terminated := make(chan interface{})
+		go func() {
+			defer fmt.Println("doWork exited.")
+			defer close(terminated)
+			for {
+				select {
+				case s := <-strings:
+					fmt.Println(s)
+				case <-done: // close(done)を感知する
+					return
+				}
+			}
+		}()
+		return terminated
+	}
+
+	done := make(chan interface{})
+	terminated := doWork(done, nil)
+
+	go func() {
+		time.Sleep(1 * time.Second)
+		fmt.Println("Canceling doWork goroutine...")
+		close(done)
+	}()
+
+	<-terminated
+	fmt.Println("Done.")
+}
+
+// 書き込み版
+func practice39() {
+	newRandStream := func(done <-chan interface{}) <-chan int {
+		randStream := make(chan int)
+		go func() {
+			defer fmt.Println("newRandStream closure exited.")
+			defer close(randStream)
+			for {
+				select {
+				case randStream <- rand.Int():
+				case <-done: // close(done)を感知
+					return
+				}
+			}
+		}()
+		return randStream
+	}
+
+	done := make(chan interface{})
+	randStream := newRandStream(done)
+	fmt.Println("3 random ints:")
+	for i := 0; i <= 3; i++ {
+		fmt.Printf("%v: %v\n", i, <-randStream)
+	}
+	close(done)
 }
