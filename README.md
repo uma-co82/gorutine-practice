@@ -24,3 +24,4 @@ golang gorutine practice repo
   - レキシカル拘束
 - for-select loop
 - avoid goroutine leak
+- or channle
