@@ -1174,6 +1174,9 @@ func practice39() {
  * どれか１つのチャネルが閉じられたら、まとめたチャネルも閉じる
  ***************************************************************/
 
+// 任意の数のチャネルを１つのチャネルにまとめる事ができる
+// まとめているチャネルのどれか１つでも閉じたり書き込まれたら、すぐに合成
+// されたチャネルが閉じる
 func practice40() {
 	var or func(channels ...<-chan interface{}) <-chan interface{}
 	or = func(channels ...<-chan interface{}) <-chan interface{} {
@@ -1201,4 +1204,25 @@ func practice40() {
 		}()
 		return orDone
 	}
+
+	sig := func(after time.Duration) <-chan interface{} {
+		c := make(chan interface{})
+		go func() {
+			defer close(c)
+			time.Sleep(after)
+		}()
+		return c
+	}
+
+	start := time.Now()
+	// 異なる時間待機してチャネルが閉じられるが、、、同時に閉じる
+	<-or(sig(2*time.Hour), sig(5*time.Minute), sig(1*time.Second), sig(1*time.Hour), sig(1*time.Minute))
+	fmt.Printf("done after %v", time.Since(start))
+}
+
+/***************************************************************
+ * エラーハンドリング
+ ***************************************************************/
+
+func paractice41() {
 }
