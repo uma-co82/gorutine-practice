@@ -1,6 +1,6 @@
 # gorutine-practice
 
-golang gorutine practice
+golang gorutine practice repo
 
 ## practice flow
 
@@ -16,3 +16,11 @@ golang gorutine practice
 
 - select
 - GOMAXPROCS
+
+### 3. primitive introduction
+
+- Restraint (拘束)
+  - アドホック拘束
+  - レキシカル拘束
+- for-select loop
+- avoid goroutine leak
