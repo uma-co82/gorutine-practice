@@ -26,3 +26,4 @@ golang gorutine practice repo
 - avoid goroutine leak
 - or channle
 - error handling
+- pipelline
