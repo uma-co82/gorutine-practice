@@ -28,4 +28,5 @@ golang gorutine practice repo
 - error handling
 - pipelline
   - ステージ
+  - generator
 - ファンアウト、ファンイン　
