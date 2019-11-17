@@ -1309,3 +1309,21 @@ func practice42() {
 /***************************************************************
  * パイプライン構築のベストプラクティス
  ***************************************************************/
+
+// practice42をチャネルを使って書き換える
+func practice43() {
+	generator := func(done <-chan interface{}, integers ...int) <-chan int {
+		intStream := make(chan int, len(integers))
+		go func() {
+			defer close(intStream)
+			for _, i := range integers {
+				select {
+				case <-done:
+					return
+				case intStream <- i:
+				}
+			}
+		}()
+		return intStream
+	}
+}
