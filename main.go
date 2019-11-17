@@ -103,9 +103,9 @@ func main() {
 
 	// practice44()
 
-	primeNum()
-
 	// practice45()
+
+	// primeNum()
 }
 
 /***************************************************************
@@ -1533,7 +1533,7 @@ func primeNum() {
 	done := make(chan interface{})
 	defer close(done)
 
-	for v := range primeFinder(done, generator(done, 100)) {
+	for v := range primeFinder(done, generator(done, 5000)) {
 		fmt.Println(v)
 	}
 }
