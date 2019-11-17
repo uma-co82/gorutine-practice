@@ -95,7 +95,17 @@ func main() {
 
 	// practice40()
 
-	practice41()
+	// practice41()
+
+	// practice42()
+
+	// practice43()
+
+	// practice44()
+
+	primeNum()
+
+	// practice45()
 }
 
 /***************************************************************
@@ -1470,4 +1480,60 @@ func practice44() {
 
 /***************************************************************
  * ファンアウト、ファンイン
+ * パイプライン内のあるステージで計算量が大きく、処理に時間が掛かる場合
+ * パイプライン全体の実行に長い時間がかかってしまいます。
  ***************************************************************/
+
+// 並行処理で素数出してみた
+func primeNum() {
+	generator := func(done <-chan interface{}, num int) <-chan int {
+		intStream := make(chan int)
+		go func() {
+			defer close(intStream)
+			for i := 0; i < num; i++ {
+				select {
+				case <-done:
+					return
+				case intStream <- i:
+				}
+			}
+		}()
+
+		return intStream
+	}
+
+	hoge := func(num int) bool {
+		if num == 1 || num == 2 {
+			return true
+		}
+
+		for i := 2; i < num; i++ {
+			if num%i == 0 {
+				return false
+			}
+		}
+
+		return true
+	}
+
+	primeFinder := func(done <-chan interface{}, valueStream <-chan int) <-chan int {
+		intStream := make(chan int)
+		go func() {
+			defer close(intStream)
+			for v := range valueStream {
+				if hoge(v) {
+					intStream <- v
+				}
+			}
+		}()
+
+		return intStream
+	}
+
+	done := make(chan interface{})
+	defer close(done)
+
+	for v := range primeFinder(done, generator(done, 100)) {
+		fmt.Println(v)
+	}
+}
