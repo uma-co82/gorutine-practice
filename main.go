@@ -1268,3 +1268,44 @@ func practice41() {
 		fmt.Printf("Response: %v\n", result.Response.Status)
 	}
 }
+
+/***************************************************************
+ * パイプライン
+ * システムの抽象化に使う
+ * データを受け取って、何らかの処理を行って、どこかに渡すという一連の作業に過ぎない
+ * こららの操作をパイプラインのステージと呼ぶ
+ * パイプラインを使うことで、各ステージでの懸念事項を切り分けられる
+ *
+ * - ステージは受け取るものと返すものが同じ型
+ * - ステージは引き回せるように具体化されてなければならない(golangで意識しない)
+ ***************************************************************/
+
+func practice42() {
+	// ステージの役割
+	multiply := func(values []int, multiplier int) []int {
+		multipliedValues := make([]int, len(values))
+		for i, v := range values {
+			multipliedValues[i] = v * multiplier
+		}
+		return multipliedValues
+	}
+
+	// ステージの役割
+	add := func(values []int, additive int) []int {
+		addedValues := make([]int, len(values))
+		for i, v := range values {
+			addedValues[i] = v + additive
+		}
+		return addedValues
+	}
+
+	ints := []int{1, 2, 3, 4}
+	// パイプライン
+	for _, v := range add(multiply(ints, 2), 1) {
+		fmt.Println(v)
+	}
+}
+
+/***************************************************************
+ * パイプライン構築のベストプラクティス
+ ***************************************************************/
