@@ -1482,10 +1482,57 @@ func practice44() {
  * ファンアウト、ファンイン
  * パイプライン内のあるステージで計算量が大きく、処理に時間が掛かる場合
  * パイプライン全体の実行に長い時間がかかってしまいます。
+ *
+ * ファンアウト
+ * パイプラインからの入力を扱うために複数のゴルーチンを起動するプロセス
+ * - そのステージがより前の計算結果に依存していない。
+ * - 実行が長時間に及ぶ。
  ***************************************************************/
+
+func practice45() {
+	// ファンアウト
+	// このように１つ起動するのではなく
+	// primeStream := primeFinder(done, randIntStream)
+
+	// 次のように、CPUのコア数だけ起動する
+	// numFinders := runtime.NumCPU()
+	// finders := make([]<-chan int, numFinders) for i := 0; i < numFinders; i++ {
+	// finders[i] = primeFinder(done, randIntStream) }
+
+	// ファンイン
+	// チャネルもCPUのコア数だけあるので単一のストリームに統合する
+	// fanIn := func(done <-chan interface{}, channels ...<-chan interface{}) <-chan interface{} {
+	// 	var wg sync.WaitGroup
+	// 	multiplexedStream := make(chan interface{})
+
+	// 	multiplex := func(c <-chan interface{}) {
+	// 		defer wg.Done()
+	// 		for i := range c {
+	// 			select {
+	// 			case <-done:
+	// 				return
+	// 			case multiplexedStream <- i:
+	// 			}
+	// 		}
+	// 	}
+
+	// 	wg.Add(len(channels))
+	// 	for _, c := range channels {
+	// 		go multiplex(c)
+	// 	}
+
+	// 	go func() {
+	// 		wg.Wait()
+	// 		close(multiplexedStream)
+	// 	}()
+
+	// 	return multiplexedStream
+	// }
+}
 
 // 並行処理で素数出してみた
 func primeNum() {
+	// 0〜numまでをチャネルに流す
 	generator := func(done <-chan interface{}, num int) <-chan int {
 		intStream := make(chan int)
 		go func() {
@@ -1502,6 +1549,7 @@ func primeNum() {
 		return intStream
 	}
 
+	// 素数判定
 	hoge := func(num int) bool {
 		if num == 1 || num == 2 {
 			return true
@@ -1516,6 +1564,7 @@ func primeNum() {
 		return true
 	}
 
+	// 素数判定をクリアした数字をチャネルに流す
 	primeFinder := func(done <-chan interface{}, valueStream <-chan int) <-chan int {
 		intStream := make(chan int)
 		go func() {
