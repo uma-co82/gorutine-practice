@@ -30,3 +30,4 @@ golang gorutine practice repo
   - ステージ
   - generator
 - ファンアウト、ファンイン　
+- or-done channel
