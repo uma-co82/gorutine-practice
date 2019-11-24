@@ -31,3 +31,4 @@ golang gorutine practice repo
   - generator
 - ファンアウト、ファンイン　
 - or-done channel
+- tee channel
