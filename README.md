@@ -32,3 +32,4 @@ golang gorutine practice repo
 - ファンアウト、ファンイン　
 - or-done channel
 - tee channel
+- bridge channel
