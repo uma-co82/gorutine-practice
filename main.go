@@ -106,6 +106,20 @@ func main() {
 	// practice45()
 
 	// primeNum()
+
+	advent()
+}
+
+func advent() {
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		fmt.Println("Hello")
+	}()
+
+	wg.Wait()
 }
 
 /***************************************************************
