@@ -111,21 +111,32 @@ func main() {
 
 	// practice48()
 
-	// primeNum()
+	primeNum()
 
 	// advent()
 }
 
 func advent() {
-	var wg sync.WaitGroup
+	doSomething := func(done <-chan interface{}, stringStream <-chan string) {
+		for {
+			select {
+			case s := <-stringStream:
+				fmt.Println(s)
+			case <-done: // close(done)を検知し、doSomethingのgoroutineを終了する
+				fmt.Println("doSomething 終了")
+				return
+			}
+		}
+	}
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		fmt.Println("Hello")
+	done := make(chan interface{})
+
+	go func() { // 5秒後にdoneチャネルを閉じる
+		time.Sleep(5 * time.Second)
+		close(done)
 	}()
 
-	wg.Wait()
+	doSomething(done, nil) // 5秒後に終了する
 }
 
 /***************************************************************
@@ -1648,9 +1659,12 @@ func practice47() {
  ***************************************************************/
 
 func practice48() {
+	// bridge := func(done <-chan interface{}, chanStream <-chan <-chan interface{}) <-chan interface{} {
+	// }
 }
 
 // 並行処理で素数出してみた
+// 並行処理使わないのより倍以上早い！
 func primeNum() {
 	// 0〜numまでをチャネルに流す
 	generator := func(done <-chan interface{}, num int) <-chan int {
@@ -1693,6 +1707,11 @@ func primeNum() {
 				if hoge(v) {
 					intStream <- v
 				}
+				// select {
+				// case <-done:
+				// 	return
+				// case <-intStream:
+				// }
 			}
 		}()
 
